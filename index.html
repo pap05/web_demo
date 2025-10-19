@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>AMASS/Student Results Portal</title>
+    <style>
+        :root{--accent:#2b6cb0;--muted:#6b7280;--bg:#f6f8fb}
+        *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+        body{margin:0;background:var(--bg);display:flex;min-height:100vh;align-items:center;justify-content:center;padding:32px}
+        .card{background:#fff;border-radius:12px;box-shadow:0 6px 24px rgba(20,20,50,.08);width:920px;max-width:100%;overflow:hidden;display:flex}
+        .aside{background:linear-gradient(180deg,var(--accent),#1e4e8a);color:#fff;padding:28px 24px;flex:0 0 320px}
+        .aside h1{margin:0 0 8px;font-size:20px}
+        .aside p{margin:0;font-size:13px;opacity:.95}
+        .main{padding:28px;flex:1}
+        form{display:grid;gap:12px}
+        label{font-size:13px;color:var(--muted)}
+        input[type="text"],input[type="password"]{padding:10px 12px;border-radius:8px;border:1px solid #e6e9ef;font-size:15px}
+        button{background:var(--accent);color:#fff;padding:10px 12px;border-radius:8px;border:0;font-weight:600;cursor:pointer}
+        .muted{color:var(--muted);font-size:13px;margin-bottom:8px}
+        .error{color:#b42318;font-size:13px;margin-top:6px}
+        table{width:100%;border-collapse:collapse;margin-top:12px}
+        th,td{padding:10px;border-bottom:1px solid #eef2f6;text-align:left}
+        th{background:#fbfdff;font-weight:600}
+        .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+        .ghost{background:transparent;border:1px solid #e6e9ef;color:var(--muted);padding:8px 10px;border-radius:8px;cursor:pointer}
+        .print-hide{display:inline-block}
+        @media (max-width:720px){.card{flex-direction:column}.aside{flex:unset;width:100%}}
+    </style>
+</head>
+<body>
+    <div class="card" role="application" aria-labelledby="app-title">
+        <div class="aside">
+            <h1 id="app-title"><strong>MY SCHOOL</strong></h1>
+            <p>Student Results Portal.</p>
+        </div>
+
+        <main class="main" id="main">
+            <!-- Login view -->
+            <section id="loginView" aria-hidden="false">
+                <div class="muted">Student Login</div>
+                <form id="loginForm" onsubmit="return false" autocomplete="on" aria-label="Student login form">
+                    <div>
+                        <label for="studentId">Student ID</label><br>
+                        <input id="studentId" type="text" inputmode="text" placeholder="e.g. SS0000" required autofocus />
+                    </div>
+                    <div>
+                        <label for="password">Password</label><br>
+                        <input id="password" type="password" placeholder="Password" required />
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <button id="loginBtn" type="submit">Login</button>
+                        <button class="ghost" id="demoBtn" type="button"></button>
+                        <div style="margin-left:auto;color:var(--muted);font-size:13px" id="attemptsInfo"></div>
+                    </div>
+                    <div id="loginError" class="error" role="alert" style="display:none"></div>
+                </form>
+
+                <hr style="border:none;border-top:1px solid #eef2f6;margin:18px 0">
+
+                <div class="muted">Quick check (no login)</div>
+                <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+                    <input id="publicId" type="text" placeholder="Enter Student ID to search (read-only demo)" />
+                    <button class="ghost" id="publicBtn">View</button>
+                </div>
+                <div id="publicError" class="error" role="alert" style="display:none"></div>
+            </section>
+
+            <!-- Dashboard view -->
+            <section id="dashboardView" aria-hidden="true" style="display:none">
+                <div class="toolbar">
+                    <div>
+                        <strong id="studentName">Student Name</strong><br>
+                        <span id="studentIdTag" style="color:var(--muted);font-size:13px"></span>
+                    </div>
+                    <div style="margin-left:auto;display:flex;gap:8px">
+                        <button class="ghost print-hide" id="logoutBtn">Logout</button>
+                        <button id="printBtn">Print Results</button>
+                    </div>
+                </div>
+
+                <div id="resultSummary" style="margin-bottom:8px;color:var(--muted)"></div>
+
+                <table aria-label="Student results">
+                    <thead>
+                        <tr><th>Subject</th><th>Score</th><th>Grade</th><th>Remarks</th></tr>
+                    </thead>
+                    <tbody id="resultsTable"></tbody>
+                </table>
+
+                <div id="noResults" style="display:none;color:var(--muted);margin-top:12px">No results available.</div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Mock student data (demo only). In production replace with secure server API.
+        const students = [
+            {
+                id: 'S0001',
+                password: '12345',
+                name: 'Fatoumata Bah ',
+                program: '10 Commerce',
+                semester: 'Term 1 - 2025',
+                results: [
+                    { subject: 'Mathematics', score: 92, grade: 'A', remarks: 'Excellent' },
+                    { subject: 'English', score: 88, grade: 'A-', remarks: 'Very Good' },
+                    { subject: 'ICT', score: 79, grade: 'B+', remarks: 'Good' }
+                ]
+            },
+            {
+                id: 'S0002',
+                password: 'bismillah',
+                name: 'Omar Jammeh',
+                program: '10 Humanity',
+                semester: 'Term 1 - 2025',
+                results: [
+                    { subject: 'English', score: 85, grade: 'A-', remarks: 'Very Good' },
+                    { subject: 'Mathematics', score: 73, grade: 'B', remarks: 'Satisfactory' }
+                ]
+            },
+            {
+                id: 'S0003',
+                password: 'bismillah',
+                name: 'Omar Jammeh',
+                program: '10 Humanity',
+                semester: 'Term 1 - 2025',
+                results: [
+                    { subject: 'Organic Chemistry', score: 85, grade: 'A-', remarks: 'Very Good' },
+                    { subject: 'Inorganic Chemistry', score: 73, grade: 'B', remarks: 'Satisfactory' }
+                ]
+            },
+            {
+                id: 'S0004',
+                password: 'bismillah',
+                name: 'Omar Jammeh',
+                program: '10 Humanity',
+                semester: 'Term 1 - 2025',
+                results: [
+                    { subject: 'English', score: 85, grade: 'A-', remarks: 'Very Good' },
+                    { subject: 'Mathematics', score: 73, grade: 'B', remarks: 'Satisfactory' }
+                ]
+            }
+            
+        ];
+
+        // Helpers to show/hide views
+        const el = id => document.getElementById(id);
+        const loginView = el('loginView');
+        const dashboardView = el('dashboardView');
+        const loginError = el('loginError');
+        const publicError = el('publicError');
+        const attemptsInfo = el('attemptsInfo');
+
+        let attempts = 0;
+
+        function normalizeId(v){ return String(v||'').trim().toUpperCase(); }
+
+        function showError(target, message){
+            target.textContent = message;
+            target.style.display = message ? 'block' : 'none';
+        }
+
+        function renderDashboard(student){
+            el('studentName').textContent = student.name;
+            el('studentIdTag').textContent = student.id + ' · ' + student.program + ' · ' + student.semester;
+            el('resultSummary').textContent = `Total subjects: ${student.results.length}`;
+            const tbody = el('resultsTable');
+            tbody.innerHTML = '';
+            if (!student.results || student.results.length === 0){
+                el('noResults').style.display = 'block';
+            } else {
+                el('noResults').style.display = 'none';
+                for (const r of student.results){
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${escapeHtml(r.subject)}</td><td>${r.score}</td><td>${r.grade}</td><td>${escapeHtml(r.remarks)}</td>`;
+                    tbody.appendChild(tr);
+                }
+            }
+            // set session
+            sessionStorage.setItem('loggedStudent', JSON.stringify(student));
+            loginView.style.display = 'none';
+            loginView.setAttribute('aria-hidden', 'true');
+            dashboardView.style.display = 'block';
+            dashboardView.setAttribute('aria-hidden', 'false');
+        }
+
+        function escapeHtml(str){
+            return String(str||'').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+        }
+
+        // Login flow
+        el('loginBtn').addEventListener('click', () => {
+            showError(loginError, '');
+            const id = normalizeId(el('studentId').value);
+            const pwd = el('password').value || '';
+            if (!id || !pwd){ showError(loginError, 'Provide both Student ID and password.'); return; }
+            const student = students.find(s => s.id === id && s.password === pwd);
+            if (!student){
+                attempts++;
+                attemptsInfo.textContent = `Attempts: ${attempts}`;
+                showError(loginError, 'Invalid ID or password.');
+                return;
+            }
+            attempts = 0;
+            attemptsInfo.textContent = '';
+            renderDashboard(student);
+        });
+
+        // Demo quick-login
+        el('demoBtn').addEventListener('click', () => {
+            const demo = students[0];
+            el('studentId').value = demo.id;
+            el('password').value = demo.password;
+            el('loginBtn').click();
+        });
+
+        // Public quick lookup (read-only demo)
+        el('publicBtn').addEventListener('click', () => {
+            showError(publicError, '');
+            const id = normalizeId(el('publicId').value);
+            if (!id){ showError(publicError, 'Enter a Student ID.'); return; }
+            const student = students.find(s => s.id === id);
+            if (!student){ showError(publicError, 'Student not found (demo data).'); return; }
+            // show dashboard but mask sensitive info (read-only)
+            const masked = {
+                id: student.id,
+                name: student.name,
+                program: student.program,
+                semester: student.semester,
+                results: student.results
+            };
+            renderDashboard(masked);
+        });
+
+        // Logout
+        el('logoutBtn').addEventListener('click', () => {
+            sessionStorage.removeItem('loggedStudent');
+            dashboardView.style.display = 'none';
+            dashboardView.setAttribute('aria-hidden', 'true');
+            loginView.style.display = 'block';
+            loginView.setAttribute('aria-hidden', 'false');
+            el('password').value = '';
+        });
+
+        // Restore session if present
+        (function restore(){
+            const sess = sessionStorage.getItem('loggedStudent');
+            if (sess){
+                try { renderDashboard(JSON.parse(sess)); }
+                catch(e){ sessionStorage.removeItem('loggedStudent'); }
+            }
+        })();
+
+        // Print
+        el('printBtn').addEventListener('click', () => {
+            window.print();
+        });
+
+        // Accessibility: submit on Enter in form
+        el('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            el('loginBtn').click();
+        });
+
+        // Prevent accidental navigation (demo)
+        window.addEventListener('beforeunload', (e) => {
+            if (sessionStorage.getItem('loggedStudent')){
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+    </script>
+</body>
+</html>
